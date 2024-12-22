@@ -1,5 +1,5 @@
 # !/usr/bin/env bash
-set -x
+# set -x
 set -eo pipefail
 
 if ! [ -x "$(command -v psql)" ]; then
@@ -27,10 +27,12 @@ DB_PORT="${POSTGRES_PORT:=5432}"
 # Check if a custom host has been set, otherwise default to 'localhost'
 DB_HOST="${POSTGRES_HOST:=localhost}"
 
-function spin_container() {
-  # Launch postgres using Docker
-  DOCKER_CMD=$1
-  docker $DOCKER_CMD \
+function start_container() {
+  docker start ${CONTAINER_NAME}
+}
+
+function run_container() {
+  docker run \
     --name ${CONTAINER_NAME} \
     -e POSTGRES_USER=${DB_USER} \
     -e POSTGRES_PASSWORD=${DB_PASSWORD} \
@@ -41,18 +43,19 @@ function spin_container() {
     # ^ Increased maximum number of connections for testing purposes
 }
 
-CONTAINER_NAME="zero2prod"
+CONTAINER_NAME="zero2prod_db"
 # Check if the container exists
 if [ "$(docker ps -a -q -f name=${CONTAINER_NAME})" ]; then
   # Check if the container is running
   if [ "$(docker ps -q -f name=${CONTAINER_NAME})" ]; then
-    echo "Container ${CONTAINER_NAME} is already running. skipping"
+    >&2 echo "Container ${CONTAINER_NAME} is already running. skipping"
   else
-    echo "Container ${CONTAINER_NAME} exists but is not running."
-    spin_container "start"
+    >&2 echo "Container ${CONTAINER_NAME} exists but is not running."
+    start_container
   fi
 else
-  spin_container "run"
+  >&2 echo "Creating Postgres container..."
+  run_container
 fi
 
 export PGPASSWORD="${DB_PASSWORD}"

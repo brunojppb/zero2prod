@@ -16,3 +16,15 @@ reqwest = "0.12.9"
 serde = { version = "1.0.216", features = ["derive"] }
 serde_json = "1.0.134"
 tokio = { version = "1.42.0", features = ["macros", "rt-multi-thread"] }
+
+[dependecies.sqlx]
+version = "0.8"
+default-features = false
+features = [
+  "runtime-tokio-rustls",
+  "macros",
+  "postgres",
+  "uuid",
+  "chrono",
+  "migrate",
+]
