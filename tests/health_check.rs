@@ -1,18 +1,15 @@
-use sqlx::{Connection, PgConnection};
+use sqlx::{Connection, PgConnection, PgPool};
 use std::net::TcpListener;
 
-use zero2prod::{
-    configuration::{self, get_configuration},
-    startup::run,
-};
+use zero2prod::{configuration::get_configuration, startup::run};
 
 #[tokio::test]
 async fn health_check_test() {
-    let address = spawn_app();
+    let app = spawn_app().await;
     let client = reqwest::Client::new();
 
     let response = client
-        .get(format!("{}/health_check", &address))
+        .get(format!("{}/health_check", &app.address))
         .send()
         .await
         .expect("Failed to execute req");
@@ -23,7 +20,7 @@ async fn health_check_test() {
 
 #[tokio::test]
 async fn subscribe_returns_200_for_valid_form_data() {
-    let app_address = spawn_app();
+    let app = spawn_app().await;
     let client = reqwest::Client::new();
 
     let configuration = get_configuration().expect("failed to read configuration files");
@@ -36,7 +33,7 @@ async fn subscribe_returns_200_for_valid_form_data() {
     let body = "name=lu%20ana&email=luana%40gmail.com";
 
     let resp = client
-        .post(format!("{}/subscriptions", &app_address))
+        .post(format!("{}/subscriptions", &app.address))
         .header("Content-Type", "application/x-www-form-urlencoded")
         .body(body)
         .send()
@@ -48,12 +45,15 @@ async fn subscribe_returns_200_for_valid_form_data() {
         .await
         .expect("Failed to fetch saved subscription");
 
+    assert_eq!(saved.email, "luana@gmail.com");
+    assert_eq!(saved.name, "lu ana");
+
     assert_eq!(200, resp.status().as_u16());
 }
 
 #[tokio::test]
 async fn subscribe_returns_400_for_invalid_data() {
-    let app_address = spawn_app();
+    let app = spawn_app().await;
     let client = reqwest::Client::new();
 
     let test_cases = vec![
@@ -64,7 +64,7 @@ async fn subscribe_returns_400_for_invalid_data() {
 
     for (invalid_body, error_msg) in test_cases {
         let resp = client
-            .post(format!("{}/subscriptions", &app_address))
+            .post(format!("{}/subscriptions", &app.address))
             .header("Content-Type", "application/x-www-form-urlencoded")
             .body(invalid_body)
             .send()
@@ -80,12 +80,28 @@ async fn subscribe_returns_400_for_invalid_data() {
     }
 }
 
-fn spawn_app() -> String {
+pub struct TestApp {
+    pub address: String,
+    pub db_pool: PgPool,
+}
+
+async fn spawn_app() -> TestApp {
     let listener = TcpListener::bind("127.0.0.1:0").expect("Failed to bind to a random port");
     let port = listener.local_addr().unwrap().port();
-    let server = run(listener).expect("Failed to bind address");
+
+    let address = format!("http://127.0.0.1:{}", port);
+    let config = get_configuration().expect("Failed to read configuration files");
+    let conn_pool = PgPool::connect(&config.database.connection_string())
+        .await
+        .expect("Failed to connect to Postgres");
+
+    let server = run(listener, conn_pool.clone()).expect("Failed to bind address");
 
     #[allow(clippy::let_underscore_future)]
     let _ = tokio::spawn(server);
-    format!("http://127.0.0.1:{}", port)
+
+    TestApp {
+        address,
+        db_pool: conn_pool,
+    }
 }

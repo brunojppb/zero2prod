@@ -25,3 +25,5 @@ sqlx = { version = "0.8", default-features = false, features = [
   "chrono",
   "migrate",
 ] }
+uuid = { version = "1.11.0", features = ["v4"] }
+chrono = { version = "0.4.39", default-features = false, features = ["clock"] }
