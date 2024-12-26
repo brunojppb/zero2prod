@@ -43,19 +43,22 @@ function run_container() {
     # ^ Increased maximum number of connections for testing purposes
 }
 
-CONTAINER_NAME="zero2prod_db"
-# Check if the container exists
-if [ "$(docker ps -a -q -f name=${CONTAINER_NAME})" ]; then
-  # Check if the container is running
-  if [ "$(docker ps -q -f name=${CONTAINER_NAME})" ]; then
-    >&2 echo "Container ${CONTAINER_NAME} is already running. skipping"
+if [[ -z "${SKIP_DOCKER}" ]]
+then
+  CONTAINER_NAME="zero2prod_db"
+  # Check if the container exists
+  if [ "$(docker ps -a -q -f name=${CONTAINER_NAME})" ]; then
+    # Check if the container is running
+    if [ "$(docker ps -q -f name=${CONTAINER_NAME})" ]; then
+      >&2 echo "Container ${CONTAINER_NAME} is already running. skipping"
+    else
+      >&2 echo "Container ${CONTAINER_NAME} exists but is not running."
+      start_container
+    fi
   else
-    >&2 echo "Container ${CONTAINER_NAME} exists but is not running."
-    start_container
+    >&2 echo "Creating Postgres container..."
+    run_container
   fi
-else
-  >&2 echo "Creating Postgres container..."
-  run_container
 fi
 
 export PGPASSWORD="${DB_PASSWORD}"
