@@ -5,6 +5,8 @@ use zero2prod::{configuration::get_configuration, startup::run};
 
 #[tokio::main]
 async fn main() -> Result<(), std::io::Error> {
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
+
     let configuration = get_configuration().expect("Failed to read configuration files.");
     let db_pool = PgPool::connect(&configuration.database.connection_string())
         .await
