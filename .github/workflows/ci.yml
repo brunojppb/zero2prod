@@ -78,3 +78,5 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo install cargo-tarpaulin
       - run: cargo tarpaulin --ignore-tests
+        env:
+          SQLX_OFFLINE: true
