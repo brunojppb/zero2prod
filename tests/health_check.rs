@@ -1,4 +1,3 @@
-use secrecy::ExposeSecret;
 use sqlx::{Connection, Executor, PgConnection, PgPool};
 use std::{net::TcpListener, sync::LazyLock};
 use uuid::Uuid;
@@ -29,10 +28,9 @@ async fn subscribe_returns_200_for_valid_form_data() {
     let app = spawn_app().await;
     let client = reqwest::Client::new();
 
-    let configuration = get_configuration().expect("failed to read configuration files");
-    let conn_string = configuration.database.connection_string();
+    let config = get_configuration().expect("failed to read configuration files");
 
-    let mut conn = PgConnection::connect(&conn_string.expose_secret())
+    let mut conn = PgConnection::connect_with(&config.database.with_db())
         .await
         .expect("Failed to connect to Postgres");
 
