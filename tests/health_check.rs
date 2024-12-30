@@ -1,3 +1,4 @@
+use secrecy::ExposeSecret;
 use sqlx::{Connection, Executor, PgConnection, PgPool};
 use std::{net::TcpListener, sync::LazyLock};
 use uuid::Uuid;
@@ -31,7 +32,7 @@ async fn subscribe_returns_200_for_valid_form_data() {
     let configuration = get_configuration().expect("failed to read configuration files");
     let conn_string = configuration.database.connection_string();
 
-    let mut conn = PgConnection::connect(&conn_string)
+    let mut conn = PgConnection::connect(&conn_string.expose_secret())
         .await
         .expect("Failed to connect to Postgres");
 
@@ -124,7 +125,7 @@ async fn spawn_app() -> TestApp {
 }
 
 pub async fn configure_database(config: &DatabaseSettings) -> PgPool {
-    let mut conn = PgConnection::connect(&config.connection_string_without_db())
+    let mut conn = PgConnection::connect(&config.connection_string_without_db().expose_secret())
         .await
         .expect("Failed to connect to Postgres");
 
@@ -132,7 +133,7 @@ pub async fn configure_database(config: &DatabaseSettings) -> PgPool {
         .await
         .expect("Failed to create database");
 
-    let conn_pool = PgPool::connect(&config.connection_string())
+    let conn_pool = PgPool::connect(&config.connection_string().expose_secret())
         .await
         .expect("Failed to connected to Postgres");
 
